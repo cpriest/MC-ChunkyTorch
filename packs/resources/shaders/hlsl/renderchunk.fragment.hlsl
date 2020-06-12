@@ -62,7 +62,7 @@ void main(in PS_Input PSInput, out PS_Output PSOutput)
 #ifndef SEASONS
 	#if !USE_ALPHA_TEST && !defined(BLEND)
 		diffuse.a = PSInput.color.a;
-	#endif	
+	#endif
 
 	diffuse.rgb *= PSInput.color.rgb;
 #else
@@ -72,37 +72,56 @@ void main(in PS_Input PSInput, out PS_Output PSOutput)
 	diffuse.a = 1.0f;
 #endif
 
-	//=*=mob-spawn-area rendering=*=	
-#if !defined(BLEND) && !defined(ALPHA_TEST)	
-	float4 scol0 = float4(1.0, 0.25, 0.0, 0.5);	
-	float4 scol1 = float4(0.75, 0.5, 0.0, 0.3);	
-	float4 dcol = float4(0.0, 0.5, 1.0, 0.5);	
-	bool sf = false;	
-	float dist = length(PSInput.wPos);	
-	float lf = max(step(24.,dist)-smoothstep(24.,24.3,dist),smoothstep(53.5,54.,dist)-step(54.,dist));	
-	if( TEXTURE_1.Sample(TextureSampler1, float2(0,1)).r > .416){	
-		//day	
-		if(PSInput.uv1.y<0.438&&PSInput.uv1.x<0.43)sf = true;	
-	}else{	
-		//night	
-		if(PSInput.uv1.x<0.43)sf = true;	
-	}	
-	scol0 = lerp(scol1,scol0,step(24.,dist)-step(54.,dist));	
-	diffuse.rgb = lerp(diffuse.rgb,scol0.rgb,scol0.a*float(sf));	
-	diffuse.rgb = lerp(diffuse.rgb,dcol.rgb,dcol.a*lf);	
-#endif	
-//=*=*=	
+	//=*=mob-spawn-area rendering=*=
+#if !defined(BLEND) && !defined(ALPHA_TEST)
+	float4 scol0 = float4(1.0, 0.25, 0.0, 0.15);	// Color of Danger Zone at Night from 24 to 54 distance from camera
+	float4 scol1 = float4(0.75, 0.5, 0.0, 0.1);		// Color of Area outside of Danger Zone at Night & with light level < 0.43
+	float4 dcol = float4(0.0, 0.5, 1.0, 0.2);		// Color (0.3 size ring) of distance to Danger Zone
+
+	bool sf = false;
+	float dist = length(PSInput.wPos);
+	float lf = max(
+		step(24.0, dist) - smoothstep(24.0, 24.3, dist),
+		smoothstep(53.5, 54.0, dist) - step(54.3, dist)
+	);
+
+	if( TEXTURE_1.Sample(TextureSampler1, float2(0,1)).r > .416){
+		//day
+		if(PSInput.uv1.y < 0.438 && PSInput.uv1.x < 0.43)
+			sf = true;
+	} else {
+		//night
+		if(PSInput.uv1.x < 0.43)
+			sf = true;
+	}
+
+	// Set scol0 to scol1 if outside 24-54 (hard step)
+	scol0 = lerp(scol1, scol0, (step(24.0, dist) - step(54.0, dist)) );
+
+	// Alter the color by scol0 if sf is true (light level < .43 (8?))
+	diffuse.rgb = lerp(diffuse.rgb, scol0.rgb, scol0.a * float(sf) * (dist < 60));
+
+	// Alter the color by dcol if within the small inner/outer rings of danger zone
+	diffuse.rgb = lerp(diffuse.rgb, dcol.rgb, dcol.a * lf);
+#endif
+//=*=*=
 
 
 #ifdef FOG
 	diffuse.rgb = lerp( diffuse.rgb, PSInput.fogColor.rgb, PSInput.fogColor.a );
 #endif
-	
-	diffuse.rgb = lerp(float3(1.0f, 1.0f, 1.0f), diffuse.rgb, smoothstep(0.0f, 2.0f, PSInput.chunkPosition * 16.0f));
+
+	// float chunkLineRange = smoothstep(0.0f, 1.0f / 16.0f, PSInput.chunkPosition * 1.0f);
+	// float lineIntensity = 1.0f - (chunkLineRange * 16);
+	// diffuse.rgb = lerp(float3(1.0f, 0.0f, 1.0f), diffuse.rgb, chunkLineRange);
+
+	// This line causes x,y,z chunk coloring
+	diffuse.rgb = lerp(float3(0.5f, 0.0f, 0.5f), diffuse.rgb, smoothstep(0.0f, 1.0f / 16.0f, PSInput.chunkPosition * 1.0f));
+	// diffuse.rgb = lerp(float3(1.0f, 1.0f, 1.0f), diffuse.rgb, smoothstep(0.0f, 2.0f, PSInput.chunkPosition * 16.0f));
 	PSOutput.color = diffuse;
 
 #ifdef VR_MODE
-	// On Rift, the transition from 0 brightness to the lowest 8 bit value is abrupt, so clamp to 
+	// On Rift, the transition from 0 brightness to the lowest 8 bit value is abrupt, so clamp to
 	// the lowest 8 bit value.
 	PSOutput.color = max(PSOutput.color, 1 / 255.0f);
 #endif

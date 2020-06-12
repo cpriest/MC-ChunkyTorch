@@ -35,17 +35,17 @@ struct PS_Output
 };
 
 #ifdef USE_EMISSIVE
-#ifdef USE_ONLY_EMISSIVE
-#define NEEDS_DISCARD(C) (C.a == 0.0f ||C.a == 1.0f )
+	#ifdef USE_ONLY_EMISSIVE
+		#define NEEDS_DISCARD(C) (C.a == 0.0f ||C.a == 1.0f )
+	#else
+		#define NEEDS_DISCARD(C)	(C.a + C.r + C.g + C.b == 0.0)
+	#endif
 #else
-#define NEEDS_DISCARD(C)	(C.a + C.r + C.g + C.b == 0.0)
-#endif
-#else
-#ifndef USE_COLOR_MASK
-#define NEEDS_DISCARD(C)	(C.a < 0.5)
-#else
-#define NEEDS_DISCARD(C)	(C.a == 0.0)
-#endif
+	#ifndef USE_COLOR_MASK
+		#define NEEDS_DISCARD(C)	(C.a < 0.5)
+	#else
+		#define NEEDS_DISCARD(C)	(C.a == 0.0)
+	#endif
 #endif
 
 float4 glintBlend(float4 dest, float4 source) {
@@ -60,35 +60,35 @@ void main(in PS_Input PSInput, out PS_Output PSOutput)
 
 #if( !defined(NO_TEXTURE) || !defined(COLOR_BASED) || defined(USE_COLOR_BLEND) )
 
-#if !defined(TEXEL_AA) || !defined(TEXEL_AA_FEATURE) || (VERSION < 0xa000 /*D3D_FEATURE_LEVEL_10_0*/)
-	color = TEXTURE_0.Sample( TextureSampler0, PSInput.uv );
-#else
-	color = texture2D_AA(TEXTURE_0, TextureSampler0, PSInput.uv);
-#endif
+	#if !defined(TEXEL_AA) || !defined(TEXEL_AA_FEATURE) || (VERSION < 0xa000 /*D3D_FEATURE_LEVEL_10_0*/)
+		color = TEXTURE_0.Sample( TextureSampler0, PSInput.uv );
+	#else
+		color = texture2D_AA(TEXTURE_0, TextureSampler0, PSInput.uv);
+	#endif
 
-#ifdef MASKED_MULTITEXTURE
-	float4 tex1 = TEXTURE_1.Sample(TextureSampler1, PSInput.uv);
+	#ifdef MASKED_MULTITEXTURE
+		float4 tex1 = TEXTURE_1.Sample(TextureSampler1, PSInput.uv);
 
-	// If tex1 has a non-black color and no alpha, use color; otherwise use tex1
-	float maskedTexture = ceil( dot( tex1.rgb, float3(1.0f, 1.0f, 1.0f) ) * ( 1.0f - tex1.a ) );
-	color = lerp(tex1, color, saturate(maskedTexture));
-#endif // MASKED_MULTITEXTURE
+		// If tex1 has a non-black color and no alpha, use color; otherwise use tex1
+		float maskedTexture = ceil( dot( tex1.rgb, float3(1.0f, 1.0f, 1.0f) ) * ( 1.0f - tex1.a ) );
+		color = lerp(tex1, color, saturate(maskedTexture));
+	#endif // MASKED_MULTITEXTURE
 
-#if defined(ALPHA_TEST) && !defined(USE_MULTITEXTURE) && !defined(MULTIPLICATIVE_TINT)
-	if( NEEDS_DISCARD( color ) )
-	{
-		discard;
-	}
-#endif
+	#if defined(ALPHA_TEST) && !defined(USE_MULTITEXTURE) && !defined(MULTIPLICATIVE_TINT)
+		if( NEEDS_DISCARD( color ) )
+		{
+			discard;
+		}
+	#endif
 
-#ifdef TINTED_ALPHA_TEST
-	float4 testColor = color;
-	testColor.a = testColor.a * PSInput.alphaTestMultiplier.r;
-	if( NEEDS_DISCARD( testColor ) )
-	{
-		discard;
-	}
-#endif
+	#ifdef TINTED_ALPHA_TEST
+		float4 testColor = color;
+		testColor.a = testColor.a * PSInput.alphaTestMultiplier.r;
+		if( NEEDS_DISCARD( testColor ) )
+		{
+			discard;
+		}
+	#endif
 
 #endif
 
@@ -122,34 +122,34 @@ void main(in PS_Input PSInput, out PS_Output PSOutput)
 	float4 tex1 = TEXTURE_1.Sample(TextureSampler1, PSInput.uv);
 	float4 tex2 = TEXTURE_2.Sample(TextureSampler2, PSInput.uv);
 	color.rgb = lerp(color.rgb, tex1, tex1.a);
-#ifdef ALPHA_TEST
-	if (color.a < 0.5f && tex1.a == 0.0f) {
-		discard;
-	}
-#endif
+	#ifdef ALPHA_TEST
+		if (color.a < 0.5f && tex1.a == 0.0f) {
+			discard;
+		}
+	#endif
 
-#ifdef COLOR_SECOND_TEXTURE
-	if (tex2.a > 0.0f) {
-		color.rgb = lerp(tex2.rgb, tex2 * CHANGE_COLOR, tex2.a);
-	}
-#else
-	color.rgb = lerp(color.rgb, tex2, tex2.a);
-#endif
+	#ifdef COLOR_SECOND_TEXTURE
+		if (tex2.a > 0.0f) {
+			color.rgb = lerp(tex2.rgb, tex2 * CHANGE_COLOR, tex2.a);
+		}
+	#else
+		color.rgb = lerp(color.rgb, tex2, tex2.a);
+	#endif
 #endif
 
 #ifdef MULTIPLICATIVE_TINT
 	float4 tintTex = TEXTURE_1.Sample(TextureSampler1, PSInput.uv);
 
-#ifdef MULTIPLICATIVE_TINT_COLOR
-	tintTex.rgb = tintTex.rgb * MULTIPLICATIVE_TINT_CHANGE_COLOR.rgb;
-#endif
+	#ifdef MULTIPLICATIVE_TINT_COLOR
+		tintTex.rgb = tintTex.rgb * MULTIPLICATIVE_TINT_CHANGE_COLOR.rgb;
+	#endif
 
-#ifdef ALPHA_TEST
-	color.rgb = lerp(color.rgb, tintTex.rgb, tintTex.a);
-	if (color.a + tintTex.a <= 0.0f) {
-		discard;
-	}
-#endif
+	#ifdef ALPHA_TEST
+		color.rgb = lerp(color.rgb, tintTex.rgb, tintTex.a);
+		if (color.a + tintTex.a <= 0.0f) {
+			discard;
+		}
+	#endif
 #endif
 
 #ifdef USE_OVERLAY
@@ -175,8 +175,9 @@ void main(in PS_Input PSInput, out PS_Output PSOutput)
 	color = glintBlend(color, glint);
 #endif
 
-	//WARNING do not refactor this
-	PSOutput.color = color;
+//WARNING do not refactor this
+PSOutput.color = color;
+
 #ifdef UI_ENTITY
 	PSOutput.color.a *= HUD_OPACITY;
 #endif
