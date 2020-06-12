@@ -1,0 +1,17 @@
+{
+	"format_version": 1,
+	"header":         {
+		"name":        "My Chunky Torch Resources",
+		"description": "Customizations to ChunkyTorch by Fizz",
+		"uuid":        "c95f5b12-b780-4feb-b913-44f074636a92",
+		"version":     [1, 0, 0]
+	},
+	"modules":        [
+		{
+			"description": "Resources for My Chunky Torch",
+			"type":        "resources",
+			"uuid":        "02cf88d2-56f8-4988-9caf-d6452da6d9ca",
+			"version":     [1, 0, 0]
+		}
+	]
+}
