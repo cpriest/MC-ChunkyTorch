@@ -117,20 +117,25 @@ void main(in PS_Input PSInput, out PS_Output PSOutput)
 	float3 chPos = PSInput.chunkPosition;
 	float3 chMax = 16;
 
-	float3 edgeStart = 0.000001;
-	float3 edgeEnd = 0.02;
+	float3 edgeOffset = 0.000001;	// Offset from chunk edge to begin coloring
+	float3 edgeWidth = 0.03;		// Offset from chunk edge to smoothstep to off
+	float3 edgeRed = float3(.5, 0, 0);
+	float3 edgeBlue = float3(0.2, 0.2, 1);
 
-	float3 edgeCol = (1.0, 0.5, 0.8);
+	float3  edgePct;
+	float3 	distFade = smoothstep(24, 26, dist);
 
-	// lerp edgeCol to diffuse from edgeStart to edgeEnd
-	diffuse.rb = lerp(edgeCol.rb, diffuse.rb,
-		// Start at edgeStart				smoothstep from edgeStart to edgeEnd
-		(1-step(edgeStart.xz, chPos.xz)) + smoothstep(edgeStart.xz, edgeEnd.xz, chPos.xz ) );
+	// lerp edgeCol to diffuse from edgeOffset to edgeWidth
+	// 			Start at edgeOffset					smoothstep from edgeOffset to edgeWidth
+	edgePct = (1-step(edgeOffset, chPos)) + smoothstep(edgeOffset, edgeWidth, chPos );
+	diffuse.rgb = lerp(edgeRed, diffuse.rgb, max(edgePct.xxx, distFade.xxx));
+	diffuse.rgb = lerp(edgeBlue, diffuse.rgb, max(edgePct.zzz, distFade.zzz));
 
-	// lerp edgeCol to diffuse from edgeEnd to chunk end
-	diffuse.rb = lerp(edgeCol.rb, diffuse.rb,
-		// Smoothstep at edge end													stop just before chunk end
-		(1-smoothstep(chMax.xz - edgeEnd.xz, chMax.xz - edgeStart.xz, chPos.xz )) + step(chMax.xz - edgeStart.xz, chPos.xz) );
+	// lerp edgeCol to diffuse from edgeWidth to chunk end
+	// 			Smoothstep at edge end														stop just before chunk end
+	// edgePct = (1-smoothstep(chMax - edgeWidth, chMax - edgeOffset, chPos )) + step(chMax - edgeOffset, chPos);
+	// diffuse.rgb = lerp(edgeRed, diffuse.rgb, max(edgePct.xxx, distFade.xxx));
+	// diffuse.rgb = lerp(edgeBlue, diffuse.rgb, max(edgePct.zzz, distFade.zzz));
 
 	// This original line causes x,y,z chunk coloring
 	// diffuse.rgb = lerp(float3(1.0f, 1.0f, 1.0f), diffuse.rgb, smoothstep(0.0f, 2.0f, PSInput.chunkPosition * 16.0f));
