@@ -129,22 +129,31 @@ void main(in PS_Input PSInput, out PS_Output PSOutput)
 	float3  edgePct;
 	float3 	distFade = smoothstep(24, 26, dist);
 
-	// 			Start at edgeOffset					smoothstep from edgeOffset to edgeWidth
+// ---- Close Chunk Boundary Highlight (0, 0) ----
+
+	// 		   Start at edgeOffset			smoothstep from edgeOffset to edgeWidth
 	edgePct = (1-step(edgeOffset, chPos)) + smoothstep(edgeOffset, edgeWidth, chPos );
 
-	// lerp edgeCol to diffuse based on edgePct, capped by distFade
+	// lerp edgeColor to diffuse color based on edgePct, capped by distFade
 	diffuse.rgb = lerp(edgeRed, diffuse.rgb, max(edgePct.x, distFade.x));		// Red / x
 	// diffuse.rgb = lerp(edgeGreen, diffuse.rgb, max(edgePct.y, distFade.y));	// Green / y
 	diffuse.rgb = lerp(edgeBlue, diffuse.rgb, max(edgePct.z, distFade.z));		// Blue / z
 
-	float3 chMax = 16;
-	// lerp edgeCol to diffuse from edgeWidth to chunk end
-	// 			Smoothstep at edge end														stop just before chunk end
-	// edgePct = (1-smoothstep(chMax - edgeWidth, chMax - edgeOffset, chPos )) + step(chMax - edgeOffset, chPos);
-	// diffuse.rgb = lerp(edgeRed, diffuse.rgb, max(edgePct.xxx, distFade.xxx));
-	// diffuse.rgb = lerp(edgeBlue, diffuse.rgb, max(edgePct.zzz, distFade.zzz));
 
-	// This original line causes x,y,z chunk coloring
+// ---- Far Chunk Boundary Highlight (16, 16) ----
+
+	// float3 chMax = 16;
+
+	// 			  Smoothstep at edge end										 stop just before chunk end
+	// edgePct = (1-smoothstep(chMax - edgeWidth, chMax - edgeOffset, chPos )) + step(chMax - edgeOffset, chPos);
+
+	// lerp edgeColor to diffuse color based on edgePct, capped by distFade
+	// diffuse.rgb = lerp(edgeRed, diffuse.rgb, max(edgePct.x, distFade.x));
+	// diffuse.rgb = lerp(edgeGreen, diffuse.rgb, max(edgePct.y, distFade.y));
+	// diffuse.rgb = lerp(edgeBlue, diffuse.rgb, max(edgePct.z, distFade.z));
+
+
+	// This original line (by Fizz, et al) causes x,y,z chunk coloring
 	// diffuse.rgb = lerp(float3(1.0f, 1.0f, 1.0f), diffuse.rgb, smoothstep(0.0f, 2.0f, PSInput.chunkPosition * 16.0f));
 
 
