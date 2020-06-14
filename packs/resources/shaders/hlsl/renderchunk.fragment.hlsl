@@ -74,12 +74,14 @@ void main(in PS_Input PSInput, out PS_Output PSOutput)
 
 	//=*=mob-spawn-area rendering=*=
 #if !defined(BLEND) && !defined(ALPHA_TEST)
-	float4 scol0 = float4(1.0, 0.25, 0.0, 0.15);	// Color of Danger Zone at Night from 24 to 54 distance from camera
+	float4 scol0 = float4(1.0, 0.25, 0.0, 0.20);		// Color of Danger Zone at Night from 24 to 54 distance from camera
 	float4 scol1 = float4(0.75, 0.5, 0.0, 0.1);		// Color of Area outside of Danger Zone at Night & with light level < 0.43
 	float4 dcol = float4(0.0, 0.5, 1.0, 0.2);		// Color (0.3 size ring) of distance to Danger Zone
 
 	bool sf = false;
 	float dist = length(PSInput.wPos);
+
+	// This determines the inner/outer ring factor based on distance from camera
 	float lf = max(
 		step(24.0, dist) - smoothstep(24.0, 24.3, dist),
 		smoothstep(53.5, 54.0, dist) - step(54.3, dist)
@@ -99,10 +101,10 @@ void main(in PS_Input PSInput, out PS_Output PSOutput)
 	scol0 = lerp(scol1, scol0, (step(24.0, dist) - step(54.0, dist)) );
 
 	// Alter the color by scol0 if sf is true (light level < .43 (8?))
-	diffuse.rgb = lerp(diffuse.rgb, scol0.rgb, scol0.a * float(sf) * (dist < 60));
+	// diffuse.rgb = lerp(diffuse.rgb, scol0.rgb, scol0.a * float(sf) * (dist < 60));
 
 	// Alter the color by dcol if within the small inner/outer rings of danger zone
-	diffuse.rgb = lerp(diffuse.rgb, dcol.rgb, dcol.a * lf);
+	// diffuse.rgb = lerp(diffuse.rgb, dcol.rgb, dcol.a * lf);
 #endif
 //=*=*=
 
@@ -111,12 +113,33 @@ void main(in PS_Input PSInput, out PS_Output PSOutput)
 	diffuse.rgb = lerp( diffuse.rgb, PSInput.fogColor.rgb, PSInput.fogColor.a );
 #endif
 
+	float3 chPos = PSInput.chunkPosition;
+	float3 chMax = 16;
+
+	float3 edgeStart = 0.000001;
+	float3 edgeEnd = 0.04;
+
+	float3 edgeCol = (0.3, 0.5, 0.7);
+
 	// float chunkLineRange = smoothstep(0.0f, 1.0f / 16.0f, PSInput.chunkPosition * 1.0f);
 	// float lineIntensity = 1.0f - (chunkLineRange * 16);
 	// diffuse.rgb = lerp(float3(1.0f, 0.0f, 1.0f), diffuse.rgb, chunkLineRange);
 
+	// lerp edgeCol to diffuse from edgeStart to edgeEnd
+	// diffuse.r = lerp(edgeCol.r, diffuse.r, (1-step(edgeStart, chPos.r)) + smoothstep(edgeStart, edgeEnd, chPos.r ) );
+	// // lerp edgeCol to diffuse from edgeEnd to chunk end
+	// diffuse.r = lerp(edgeCol.r, diffuse.r, (1-smoothstep(chMax-edgeEnd, chMax-edgeStart, chPos.r )) + step(chMax-edgeStart, chPos.r) );
+
+	// lerp edgeCol to diffuse from edgeStart to edgeEnd
+	diffuse.rb = lerp(edgeCol.rb, diffuse.rb, (1-step(edgeStart.xz, chPos.xz)) + smoothstep(edgeStart.xz, edgeEnd.xz, chPos.xz ) );
+	// lerp edgeCol to diffuse from edgeEnd to chunk end
+	diffuse.rb = lerp(edgeCol.rb, diffuse.rb, (1-smoothstep(chMax.xz - edgeEnd.xz, chMax.xz - edgeStart.xz, chPos.xz )) + step(chMax.xz - edgeStart.xz, chPos.xz) );
+
+	// diffuse.g = lerp(0.5f, diffuse.g, smoothstep(16.0f, 15.99f, 16 - PSInput.chunkPosition.g ) + smoothstep(0.01f, 0.05f, PSInput.chunkPosition.g ));
+	// diffuse.b = lerp(0.5f, diffuse.b, 1+smoothstep(16.0f, 15.99f, 16 - PSInput.chunkPosition.b ) + smoothstep(0.01f, 0.05f, PSInput.chunkPosition.b ));
+	// diffuse.rgb = lerp(float3(0.5f, 0.0f, 0.5f), diffuse.rgb, smoothstep(0.02f, 1.0f / 16.0f, PSInput.chunkPosition * 1.0f));
+
 	// This line causes x,y,z chunk coloring
-	diffuse.rgb = lerp(float3(0.5f, 0.0f, 0.5f), diffuse.rgb, smoothstep(0.0f, 1.0f / 16.0f, PSInput.chunkPosition * 1.0f));
 	// diffuse.rgb = lerp(float3(1.0f, 1.0f, 1.0f), diffuse.rgb, smoothstep(0.0f, 2.0f, PSInput.chunkPosition * 16.0f));
 	PSOutput.color = diffuse;
 
