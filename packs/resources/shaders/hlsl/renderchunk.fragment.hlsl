@@ -101,10 +101,10 @@ void main(in PS_Input PSInput, out PS_Output PSOutput)
 	scol0 = lerp(scol1, scol0, (step(24.0, dist) - step(54.0, dist)) );
 
 	// Alter the color by scol0 if sf is true (light level < .43 (8?))
-	// diffuse.rgb = lerp(diffuse.rgb, scol0.rgb, scol0.a * float(sf) * (dist < 60));
+	diffuse.rgb = lerp(diffuse.rgb, scol0.rgb, scol0.a * float(sf) * (dist < 60));
 
 	// Alter the color by dcol if within the small inner/outer rings of danger zone
-	// diffuse.rgb = lerp(diffuse.rgb, dcol.rgb, dcol.a * lf);
+	diffuse.rgb = lerp(diffuse.rgb, dcol.rgb, dcol.a * lf);
 #endif
 //=*=*=
 
@@ -113,33 +113,26 @@ void main(in PS_Input PSInput, out PS_Output PSOutput)
 	diffuse.rgb = lerp( diffuse.rgb, PSInput.fogColor.rgb, PSInput.fogColor.a );
 #endif
 
+	// Parameters to chunk boundary highlighting
 	float3 chPos = PSInput.chunkPosition;
 	float3 chMax = 16;
 
 	float3 edgeStart = 0.000001;
-	float3 edgeEnd = 0.04;
+	float3 edgeEnd = 0.02;
 
-	float3 edgeCol = (0.3, 0.5, 0.7);
-
-	// float chunkLineRange = smoothstep(0.0f, 1.0f / 16.0f, PSInput.chunkPosition * 1.0f);
-	// float lineIntensity = 1.0f - (chunkLineRange * 16);
-	// diffuse.rgb = lerp(float3(1.0f, 0.0f, 1.0f), diffuse.rgb, chunkLineRange);
+	float3 edgeCol = (1.0, 0.5, 0.8);
 
 	// lerp edgeCol to diffuse from edgeStart to edgeEnd
-	// diffuse.r = lerp(edgeCol.r, diffuse.r, (1-step(edgeStart, chPos.r)) + smoothstep(edgeStart, edgeEnd, chPos.r ) );
-	// // lerp edgeCol to diffuse from edgeEnd to chunk end
-	// diffuse.r = lerp(edgeCol.r, diffuse.r, (1-smoothstep(chMax-edgeEnd, chMax-edgeStart, chPos.r )) + step(chMax-edgeStart, chPos.r) );
+	diffuse.rb = lerp(edgeCol.rb, diffuse.rb,
+		// Start at edgeStart				smoothstep from edgeStart to edgeEnd
+		(1-step(edgeStart.xz, chPos.xz)) + smoothstep(edgeStart.xz, edgeEnd.xz, chPos.xz ) );
 
-	// lerp edgeCol to diffuse from edgeStart to edgeEnd
-	diffuse.rb = lerp(edgeCol.rb, diffuse.rb, (1-step(edgeStart.xz, chPos.xz)) + smoothstep(edgeStart.xz, edgeEnd.xz, chPos.xz ) );
 	// lerp edgeCol to diffuse from edgeEnd to chunk end
-	diffuse.rb = lerp(edgeCol.rb, diffuse.rb, (1-smoothstep(chMax.xz - edgeEnd.xz, chMax.xz - edgeStart.xz, chPos.xz )) + step(chMax.xz - edgeStart.xz, chPos.xz) );
+	diffuse.rb = lerp(edgeCol.rb, diffuse.rb,
+		// Smoothstep at edge end													stop just before chunk end
+		(1-smoothstep(chMax.xz - edgeEnd.xz, chMax.xz - edgeStart.xz, chPos.xz )) + step(chMax.xz - edgeStart.xz, chPos.xz) );
 
-	// diffuse.g = lerp(0.5f, diffuse.g, smoothstep(16.0f, 15.99f, 16 - PSInput.chunkPosition.g ) + smoothstep(0.01f, 0.05f, PSInput.chunkPosition.g ));
-	// diffuse.b = lerp(0.5f, diffuse.b, 1+smoothstep(16.0f, 15.99f, 16 - PSInput.chunkPosition.b ) + smoothstep(0.01f, 0.05f, PSInput.chunkPosition.b ));
-	// diffuse.rgb = lerp(float3(0.5f, 0.0f, 0.5f), diffuse.rgb, smoothstep(0.02f, 1.0f / 16.0f, PSInput.chunkPosition * 1.0f));
-
-	// This line causes x,y,z chunk coloring
+	// This original line causes x,y,z chunk coloring
 	// diffuse.rgb = lerp(float3(1.0f, 1.0f, 1.0f), diffuse.rgb, smoothstep(0.0f, 2.0f, PSInput.chunkPosition * 16.0f));
 	PSOutput.color = diffuse;
 
