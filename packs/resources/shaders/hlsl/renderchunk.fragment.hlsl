@@ -113,24 +113,31 @@ void main(in PS_Input PSInput, out PS_Output PSOutput)
 	diffuse.rgb = lerp( diffuse.rgb, PSInput.fogColor.rgb, PSInput.fogColor.a );
 #endif
 
+
+//
+// ------ Chunk Boundary Highlighting ------
+//
 	// Parameters to chunk boundary highlighting
 	float3 chPos = PSInput.chunkPosition;
-	float3 chMax = 16;
 
 	float3 edgeOffset = 0.000001;	// Offset from chunk edge to begin coloring
 	float3 edgeWidth = 0.03;		// Offset from chunk edge to smoothstep to off
 	float3 edgeRed = float3(.5, 0, 0);
+	// float3 edgeGreen = float3(0, 1, 0);
 	float3 edgeBlue = float3(0.2, 0.2, 1);
 
 	float3  edgePct;
 	float3 	distFade = smoothstep(24, 26, dist);
 
-	// lerp edgeCol to diffuse from edgeOffset to edgeWidth
 	// 			Start at edgeOffset					smoothstep from edgeOffset to edgeWidth
 	edgePct = (1-step(edgeOffset, chPos)) + smoothstep(edgeOffset, edgeWidth, chPos );
-	diffuse.rgb = lerp(edgeRed, diffuse.rgb, max(edgePct.xxx, distFade.xxx));
-	diffuse.rgb = lerp(edgeBlue, diffuse.rgb, max(edgePct.zzz, distFade.zzz));
 
+	// lerp edgeCol to diffuse based on edgePct, capped by distFade
+	diffuse.rgb = lerp(edgeRed, diffuse.rgb, max(edgePct.x, distFade.x));		// Red / x
+	// diffuse.rgb = lerp(edgeGreen, diffuse.rgb, max(edgePct.y, distFade.y));	// Green / y
+	diffuse.rgb = lerp(edgeBlue, diffuse.rgb, max(edgePct.z, distFade.z));		// Blue / z
+
+	float3 chMax = 16;
 	// lerp edgeCol to diffuse from edgeWidth to chunk end
 	// 			Smoothstep at edge end														stop just before chunk end
 	// edgePct = (1-smoothstep(chMax - edgeWidth, chMax - edgeOffset, chPos )) + step(chMax - edgeOffset, chPos);
@@ -139,6 +146,8 @@ void main(in PS_Input PSInput, out PS_Output PSOutput)
 
 	// This original line causes x,y,z chunk coloring
 	// diffuse.rgb = lerp(float3(1.0f, 1.0f, 1.0f), diffuse.rgb, smoothstep(0.0f, 2.0f, PSInput.chunkPosition * 16.0f));
+
+
 	PSOutput.color = diffuse;
 
 #ifdef VR_MODE
