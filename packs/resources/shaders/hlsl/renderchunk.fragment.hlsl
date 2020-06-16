@@ -113,6 +113,14 @@ void main(in PS_Input PSInput, out PS_Output PSOutput)
 	diffuse.rgb = lerp( diffuse.rgb, PSInput.fogColor.rgb, PSInput.fogColor.a );
 #endif
 
+//
+// ------ 5 x 5 x 5 Grid Highlighting ------
+//
+//	This draws a small mark every 5 x 5 diagonal block visible to distance of 5
+//
+
+
+
 
 //
 // ------ Chunk Boundary Highlighting ------

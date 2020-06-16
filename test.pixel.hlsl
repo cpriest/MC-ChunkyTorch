@@ -1,6 +1,4 @@
 #define PI 3.14159265359
-#define amplitude .5
-#define speed 2.
 
 float2 iResolution;
 float iTime;
@@ -37,6 +35,11 @@ float sinline(float x, float y, float freq, float amp=5) {
 	return col;
 }
 
+float box(float2 uv, float2 xy, float2 size) {
+	float2 r = step(xy-size, uv) - step(xy+size, uv);
+	return (r.x * r.y);
+}
+
 // float2 sinline(float2 col, float2 uv, float2 freq) {
 // 	// float PI = 3.14159265359;
 // 	float thresh = 0.038107;
@@ -49,86 +52,103 @@ float sinline(float x, float y, float freq, float amp=5) {
 // 	return col;
 // }
 
+#define freq 20.0
+#define freqDiv 1.0 / freq
+
 float4 main_PixelGrid2(in float2 uv: TEXCOORD0) : SV_Target {
 	float4 red = float4(.8, 0, 0, .5);
 	float4 green = float4(0, .8, 0, .5);
 	float4 blue = float4(0, 0, .8, .5);
-	float gridSize = 16;
 	float _;
 	float4 col = 0;
 
-	float2 uvs = uv * iResolution;
+	float1x4 boxes = 0;
 
+	// uv -= 0.5;
 
+	// float4 br = box(uv, float2(.125, .03), (float2).009);
+	// if(br.x == 1.0)
+	// 	col = br * float4(1,1,0,1);
+	// // return col;
 
-	// col.rg = float2(sin(uv.x), sin(uv.y));
-	// col.rb = /* sin(uv.x)  */ cos(uv.xy);
-	// col.g = fmod(frac(uv.x), .1) == 0;
+// ----- INPUTS -----
+	// The number of squares shown vertically, horizontally as well with 1:1 pixel ratio
+	// float freq = 20.0;
 
-	// float sine = .5 + (sin(uvs.x));
-	// float sineCurve = Line(sine, 5, uv.y);
+	// Uncomment to animate grid in/out
+	// freq = ceil(5+abs(sin(iTime/100)*200));
+	// freq = ceil(5+abs(sin(iTime/200)*10));
+	// freq  = 5;
+	// freq  = 10;
+	// freq  = 15;
+	// freq  = 20;
+	// freq  = 50;
 
-    // col.rgb += float3(sineCurve * .2, sineCurve * .35, sineCurve * .5);
-	// if(cos(uvs.x*100*PI) >= .9)
+	// The division of the frequency in 0-1 terms
+	// float freqDiv = 1.0 / freq;
 
-	// 0.00381072
-	float
-		freq = 10.0f,
-		amp = 10,
-		freqDiv = 1 / freq
-		;
-
-
+// ----- Offset Grid via sin() -----
 	// Calculate 4 sine waves based on uv and uv offset by 1/100th of freq
 	float4 uvS = float4(uv.x, uv.y, uv.x - freqDiv, uv.y - freqDiv);
 	float4 sine = sin(uvS * PI * freq / 2) / freq;
 
 	// Smoothstep as each approaches 0
-	float spread = .015;
+	float spread = 0.01;
 	float4 sineStep = smoothstep(-spread, 0, sine) - smoothstep(0, spread, sine);
 
-	// For each pair (xy), (zw), color a dot
-	col.g = sineStep.x * sineStep.y + sineStep.z * sineStep.w;
 
+	// For each pair (xy), (zw), color a dot
+	col.g += sineStep.x * sineStep.y + sineStep.z * sineStep.w;
+
+	float divX = floor(uv.x / freqDiv),
+		  divY = floor(uv.y / freqDiv);
+
+	float tWave = 1;
+	// tWave = sin(iTime/50)*20;
+
+	boxes._m00 = freqDiv == .05;
+	for(float j=0; j <= 1.0 ; j+=freqDiv*2) {
+		col.g += smoothline(sine.x, .01, (uv.y - j) * freq/2 / tWave);
+		col.g += smoothline(sine.y, .01, (uv.x - j) * freq/2 / tWave);
+		col.g += smoothline(sine.z, .01, (uv.y - freqDiv - j) * freq/2 / tWave);
+		col.g += smoothline(sine.w, .01, (uv.x - freqDiv - j) * freq/2 / tWave);
+	}
+
+	// col.g += smoothline(sine.x, .014, (uv.y + freqDiv * (divY-2)) * freq/2);
+	// col.g += smoothline(sine.y, .014, (uv.x + -freqDiv * (divX-freqDiv)) * freq/2);
+	// col.g += smoothline(sine.z, .014, (uv.y + -freqDiv * (divY)) * freq/2);
+	// col.g += smoothline(sine.w, .014, (uv.x - freqDiv*3) * freq/2);
+	// col.g += smoothline(sine.w, .014, (uv.x - freqDiv*5) * freq/2);
+	// col.g += smoothline(sine.w, .014, (uv.x - freqDiv * divX) * freq/2);
+
+	// float4 sineLine = smoothstep(-spread, 0, sine) - smoothstep(0, spread, sine);
 
 	// Visualize quad sin waves
 	// ** Refactor to use uvS??
-	// for(float j=0.0f; j<1.0f; j+=0.1 /* freqDiv */) {
-	// 	col.g += sinline(uv.x - j, uv.y - j, freq / 2, freq) /* *(sin(iTime/50))*/;
-	// 	col.g += sinline(uv.y - j, uv.x - j, freq / 2, freq) /* *(sin(iTime/50))*/;
+	// for(float j=0.0; j<1.0; j+=0.05) {
+	// 	col.g += sinline(uv.x - j, uv.y - j, freq / 2, freq / 2 /* / (sin(iTime/100)*30) */ ) /* *(sin(iTime/50))*/;
+	// 	col.g += sinline(uv.y - j, uv.x - j, freq / 2, freq / 2 /* / (sin(iTime/100)*30) */ ) /* *(sin(iTime/50))*/;
 	// }
-	// col.rb += sinline(col.rb, float2(uv.x - 0.5, uv.y - 0.4), freq / 2);
 
-	// Red/Blue Grid #2
-	float	mn8=0.0043450070,	// Some magic number that multiplies by frequency appropriately
-		thresh = mn8 * freq;	// To serve as threshold
+
+
+// ----- Red / Blue Grid -----
+	// Red/Blue Grid based on frequency
+	//  5 - 0.0038108
+	// 50 - 0.004982
+	float mn8=0.004982,		// Some magic number that multiplies by frequency
+		  thresh = mn8 * freq;	// appropriately to serve as threshold
 	float2 xy = sin(uv*PI*freq);
 	col.rb += step(thresh, smoothline(0, thresh/2, xy));
-	// col.g += col.r + col.b;
 
-	// Tinker from Red/Blue Grid
-	// float2 xy = sin(uv*PI*freq);
-	// float2 xy2 = cos(uv*PI*freq/2);
-	// float2 xy3 = sin(uv*PI*freq/2);
-
-	// col.rb = step(thresh, smoothline(0, thresh/2, xy));
-	// col.g = step(thresh, smoothline(0, thresh/2, xy2)).x;
-	// col.b = step(thresh, smoothline(0, thresh/2, xy3)).x;
-
-	// if(all(step(thresh, smoothline(0, thresh/2, xy)) == float2(1,1)))
-	// 	col = 1;
-
-
-
-	// Red/Blue Grid based on cosine
-	// freq = 20, thresh = 0.99774135;
-	// col.r = step(thresh, cos(uv.x*PI*freq));
-	// col.b = step(thresh, cos(uv.y*PI*freq));
-
-
+	// Colors everyting white if x/y resolution is 1:1
 	// if(iResolution.x / iResolution.y == 1)
 	// 	col = 1;
 
+	col += float4(1, 1, 1, 1) * box(uv, float2(.075, .03), (float2).009) * boxes._m00;
+	col += float4(1, 1, 1, 1) * box(uv, float2(.125, .03), (float2).009) * boxes._m01;
+	col += float4(1, 1, 1, 1) * box(uv, float2(.175, .03), (float2).009) * boxes._m02;
+	col += float4(1, 1, 1, 1) * box(uv, float2(.225, .03), (float2).009) * boxes._m03;
 	return col;
 }
 
