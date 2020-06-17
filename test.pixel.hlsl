@@ -52,9 +52,6 @@ float box(float2 uv, float2 xy, float2 size) {
 // 	return col;
 // }
 
-#define freq 20.0
-#define freqDiv 1.0 / freq
-
 float4 main_PixelGrid2(in float2 uv: TEXCOORD0) : SV_Target {
 	float4 red = float4(.8, 0, 0, .5);
 	float4 green = float4(0, .8, 0, .5);
@@ -72,23 +69,17 @@ float4 main_PixelGrid2(in float2 uv: TEXCOORD0) : SV_Target {
 	// // return col;
 
 // ----- INPUTS -----
+#define freq 20.0
+#define freqDiv 1.0 / freq
 	// The number of squares shown vertically, horizontally as well with 1:1 pixel ratio
 	// float freq = 20.0;
 
-	// Uncomment to animate grid in/out
+	// Uncomment to animate grid in/out (doesn't work with freq being a #define)
 	// freq = ceil(5+abs(sin(iTime/100)*200));
 	// freq = ceil(5+abs(sin(iTime/200)*10));
-	// freq  = 5;
-	// freq  = 10;
-	// freq  = 15;
-	// freq  = 20;
-	// freq  = 50;
-
-	// The division of the frequency in 0-1 terms
-	// float freqDiv = 1.0 / freq;
 
 // ----- Offset Grid via sin() -----
-	// Calculate 4 sine waves based on uv and uv offset by 1/100th of freq
+	// Calculate 4 sine waves based on uv and uv offset by freqDiv
 	float4 uvS = float4(uv.x, uv.y, uv.x - freqDiv, uv.y - freqDiv);
 	float4 sine = sin(uvS * PI * freq / 2) / freq;
 
@@ -96,41 +87,34 @@ float4 main_PixelGrid2(in float2 uv: TEXCOORD0) : SV_Target {
 	float spread = 0.01;
 	float4 sineStep = smoothstep(-spread, 0, sine) - smoothstep(0, spread, sine);
 
-
 	// For each pair (xy), (zw), color a dot
 	col.g += sineStep.x * sineStep.y + sineStep.z * sineStep.w;
 
-	float divX = floor(uv.x / freqDiv),
-		  divY = floor(uv.y / freqDiv);
+	// boxes._m00 = freqDiv == .05;
 
-	float tWave = 1;
-	// tWave = sin(iTime/50)*20;
+// ----- Animated Waves of Lines -----
+	// #define WAVES
 
-	boxes._m00 = freqDiv == .05;
-	for(float j=0; j <= 1.0 ; j+=freqDiv*2) {
-		col.g += smoothline(sine.x, .01, (uv.y - j) * freq/2 / tWave);
-		col.g += smoothline(sine.y, .01, (uv.x - j) * freq/2 / tWave);
-		col.g += smoothline(sine.z, .01, (uv.y - freqDiv - j) * freq/2 / tWave);
-		col.g += smoothline(sine.w, .01, (uv.x - freqDiv - j) * freq/2 / tWave);
-	}
+	#ifdef WAVES
+		float tWave = 1;
+		tWave = sin(iTime/50)*20;
+		float tAbsWave = abs(tWave);
 
-	// col.g += smoothline(sine.x, .014, (uv.y + freqDiv * (divY-2)) * freq/2);
-	// col.g += smoothline(sine.y, .014, (uv.x + -freqDiv * (divX-freqDiv)) * freq/2);
-	// col.g += smoothline(sine.z, .014, (uv.y + -freqDiv * (divY)) * freq/2);
-	// col.g += smoothline(sine.w, .014, (uv.x - freqDiv*3) * freq/2);
-	// col.g += smoothline(sine.w, .014, (uv.x - freqDiv*5) * freq/2);
-	// col.g += smoothline(sine.w, .014, (uv.x - freqDiv * divX) * freq/2);
+		for(float j=0; j <= 1.0; j+=freqDiv*2) {
+			float4 pct = float4(smoothline(sine.x, .002, (uv.y - j) * freq/2 / tWave)
+					, smoothline(sine.y, .002, (uv.x - j) * freq/2 / tWave)
+					, smoothline(sine.z, .002, (uv.y - freqDiv - j) * freq/2 / tWave)
+					, smoothline(sine.w, .002, (uv.x - freqDiv - j) * freq/2 / tWave)
+			);
+			float pctT = pct.x + pct.y + pct.z + pct.w;
 
-	// float4 sineLine = smoothstep(-spread, 0, sine) - smoothstep(0, spread, sine);
+			// float colS = abs(cos(iTime/5 * j)) * pct;
 
-	// Visualize quad sin waves
-	// ** Refactor to use uvS??
-	// for(float j=0.0; j<1.0; j+=0.05) {
-	// 	col.g += sinline(uv.x - j, uv.y - j, freq / 2, freq / 2 /* / (sin(iTime/100)*30) */ ) /* *(sin(iTime/50))*/;
-	// 	col.g += sinline(uv.y - j, uv.x - j, freq / 2, freq / 2 /* / (sin(iTime/100)*30) */ ) /* *(sin(iTime/50))*/;
-	// }
-
-
+			// col.g += pctT;
+			// col.rgb += float3(2 * pct.x, 2*pct.z, 3*pct.y);
+			col.g += pctT;
+		}
+	#endif
 
 // ----- Red / Blue Grid -----
 	// Red/Blue Grid based on frequency
@@ -142,8 +126,7 @@ float4 main_PixelGrid2(in float2 uv: TEXCOORD0) : SV_Target {
 	col.rb += step(thresh, smoothline(0, thresh/2, xy));
 
 	// Colors everyting white if x/y resolution is 1:1
-	// if(iResolution.x / iResolution.y == 1)
-	// 	col = 1;
+	boxes._m03 = iResolution.x / iResolution.y == 1;
 
 	col += float4(1, 1, 1, 1) * box(uv, float2(.075, .03), (float2).009) * boxes._m00;
 	col += float4(1, 1, 1, 1) * box(uv, float2(.125, .03), (float2).009) * boxes._m01;
