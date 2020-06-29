@@ -216,37 +216,37 @@ float3 testing(float3 color, in PS_Input psi) {
 }
 
 float3 HighlightSpawnArea(float3 diffuse, in PS_Input psi) {
-	float4 scol0 = float4(1.0, 0.25, 0.0, 0.20);	// Color of Danger Zone at Night from 24 to 54 distance from camera
-	float4 scol1 = float4(0.75, 0.5, 0.0, 0.1);		// Color of Area with light level < 0.43
-	float4 dcol = float4(0.0, 0.5, 1.0, 0.2);		// Color (0.3 size ring) of distance to begin/end Spawning Zone
+	float4 colDanger = float4(1.0, 0.25, 0.0, 0.20);	// Color of Danger Zone at Night from 24 to 54 distance from camera
+	float4 colLowLight = float4(0.75, 0.5, 0.0, 0.1);		// Color of Area with light level < 0.43
+	float4 colRing = float4(0.0, 0.5, 1.0, 0.2);		// Color (0.3 size ring) of distance to begin/end Spawning Zone
 
-	bool sf = false;
+	bool lowLight = false;
 	float dist = length(psi.wPos);
 
 	// This determines the inner/outer ring factor based on distance from camera
-	float lf = max(
+	float ringPct = max(
 		step(24.0, dist) - smoothstep(24.0, 24.3, dist),
 		smoothstep(53.5, 54.0, dist) - step(54.3, dist)
 	);
 
 	if( TEXTURE_1.Sample(TextureSampler1, float2(0,1)).r > .416){
 		//day
-		if(psi.uv1.y < 0.438 && psi.uv1.x < 0.43)
-			sf = true;
+		if(psi.uv1.x < 0.43 && psi.uv1.y < 0.438)
+			lowLight = true;
 	} else {
 		//night
 		if(psi.uv1.x < 0.43)
-			sf = true;
+			lowLight = true;
 	}
 
-	// Set scol0 to scol1 if outside 24-54 (hard step)
-	scol0 = lerp(scol1, scol0, (step(24.0, dist) - step(54.0, dist)) );
+	// Set shade to colDanger if inside 24-54 (hard step range), otherwise colLowLight
+	float4 shade = lerp(colLowLight, colDanger, (step(24.0, dist) - step(54.0, dist)) );
 
-	// Alter the color by scol0 if sf is true (light level < .43 (8?))
-	diffuse.rgb = lerp(diffuse.rgb, scol0.rgb, scol0.a * float(sf) * (dist < 60));
+	// Alter the color by colDanger if lowLight is true (light level < .43 (8?)) and distance < 60
+	diffuse.rgb = lerp(diffuse.rgb, shade.rgb, shade.a * float(lowLight) * (dist < 60));
 
-	// Alter the color by dcol if within the small inner/outer rings of danger zone
-	diffuse.rgb = lerp(diffuse.rgb, dcol.rgb, dcol.a * lf);
+	// Color the inner/outer rings of spawn area
+	diffuse.rgb = lerp(diffuse.rgb, colRing.rgb, colRing.a * ringPct);
 
 	return diffuse;
 }
