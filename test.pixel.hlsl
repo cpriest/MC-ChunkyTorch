@@ -8,10 +8,6 @@ float Line(float n, float pixWidth, float alpha){
 		- smoothstep(n, n  + pixWidth/iResolution.x, alpha);
 }
 
-// #include "test.pixel.grid1.hlsl"
-// #include "test.pixel.grid2.hlsl"
-#include "my.util.hlsl"
-
 float smoothline(float center, float feather, float at) {
 	return smoothstep(center-feather, center, at)
 		 - smoothstep(center, center+feather, at);
@@ -25,7 +21,6 @@ float2 smoothline(float2 center, float2 feather, float2 at) {
 }
 
 float sinline(float x, float y, float freq, float amp=5) {
-	// float PI = 3.14159265359;
 	float thresh = 0.038107;
 
 	float sine = sin(x * PI * freq) / amp;
@@ -127,6 +122,7 @@ float4 main_PixelGrid2(in float2 uv: TEXCOORD0) : SV_Target {
 
 	// Colors everyting white if x/y resolution is 1:1
 	boxes._m03 = iResolution.x / iResolution.y == 1;
+	boxes._m03 = 1;
 
 	col += float4(1, 1, 1, 1) * box(uv, float2(.075, .03), (float2).009) * boxes._m00;
 	col += float4(1, 1, 1, 1) * box(uv, float2(.125, .03), (float2).009) * boxes._m01;
