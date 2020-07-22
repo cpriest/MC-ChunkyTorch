@@ -24,8 +24,8 @@ struct PS_Input {
 
 #ifndef BYPASS_PIXEL_SHADER
 	lpfloat4 color : COLOR;
-	snorm float2 uv0 : TEXCOORD_0_FB_MSAA;
-	snorm float2 uv1 : TEXCOORD_1_FB_MSAA;
+	float2 uv0 : TEXCOORD_0;
+	float2 uv1 : TEXCOORD_1;
 #endif
 
 #ifdef FOG

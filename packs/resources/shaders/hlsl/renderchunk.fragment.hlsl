@@ -9,14 +9,18 @@ struct PS_Input
 
 #ifndef BYPASS_PIXEL_SHADER
 	lpfloat4 color : COLOR;
-	snorm float2 uv0 : TEXCOORD_0_FB_MSAA;
-	snorm float2 uv1 : TEXCOORD_1_FB_MSAA;
+	float2 uv0 : TEXCOORD_0;
+	float2 uv1 : TEXCOORD_1;
 #endif
 
 #ifdef FOG
 	float4 fogColor : FOG_COLOR;
 #endif
 };
+
+#define rd4 float4(1,0,0,1)
+#define gr4 float4(0,1,0,1)
+#define wh4 float4(1,1,1,1)
 
 struct PS_Output
 {
@@ -216,9 +220,9 @@ float3 testing(float3 color, in PS_Input psi) {
 }
 
 float3 HighlightSpawnArea(float3 diffuse, in PS_Input psi) {
-	float4 colDanger = float4(1.0, 0.25, 0.0, 0.20);	// Color of Danger Zone at Night from 24 to 54 distance from camera
-	float4 colLowLight = float4(0.75, 0.5, 0.0, 0.1);		// Color of Area with light level < 0.43
-	float4 colRing = float4(0.0, 0.5, 1.0, 0.2);		// Color (0.3 size ring) of distance to begin/end Spawning Zone
+	float4 colDanger = float4(1.0, 0.25, 0.0, 0.20);		// Color of Danger Zone at Night from 24 to 54 distance from camera
+	float4 colLowLight = float4(0.75, 0.5, 0.0, 0.18);		// Color of Area with light level < 8/15
+	float4 colRing = float4(0.0, 0.5, 1.0, 0.2);			// Color (0.3 size ring) of distance to begin/end Spawning Zone
 
 	bool lowLight = false;
 	float dist = length(psi.wPos);
@@ -229,21 +233,25 @@ float3 HighlightSpawnArea(float3 diffuse, in PS_Input psi) {
 		smoothstep(53.5, 54.0, dist) - step(54.3, dist)
 	);
 
+	float uvLow = 7.0/15.0;
+
 	if( TEXTURE_1.Sample(TextureSampler1, float2(0,1)).r > .416){
 		//day
-		if(psi.uv1.x < 0.43 && psi.uv1.y < 0.438)
+		if(psi.uv1.x <= uvLow && psi.uv1.y < 0.438)
 			lowLight = true;
 	} else {
 		//night
-		if(psi.uv1.x < 0.43)
+		if(psi.uv1.x <= uvLow)
 			lowLight = true;
 	}
+	// Transition shade from VeryLowLight to LowLight based on light normal
+	float4 shade = colLowLight;
 
-	// Set shade to colDanger if inside 24-54 (hard step range), otherwise colLowLight
-	float4 shade = lerp(colLowLight, colDanger, (step(24.0, dist) - step(54.0, dist)) );
+	// Set shade to colDanger if inside 24-54 (hard step range), otherwise shade
+	shade = lerp(shade, colDanger, (step(24.0, dist) - step(54.0, dist)) );
 
 	// Alter the color by colDanger if lowLight is true (light level < .43 (8?)) and distance < 60
-	diffuse.rgb = lerp(diffuse.rgb, shade.rgb, shade.a * float(lowLight) * (dist < 60));
+	diffuse.rgb = lerp(diffuse.rgb, shade.rgb, shade.a /* * stepBand */ * float(lowLight) * (dist < 60));
 
 	// Color the inner/outer rings of spawn area
 	diffuse.rgb = lerp(diffuse.rgb, colRing.rgb, colRing.a * ringPct);
@@ -255,7 +263,7 @@ float3 HighlightChunkBoundary(float3 diffuse, in PS_Input psi) {
 	// Parameters to chunk boundary highlighting
 	float3 chPos = psi.chunkPosition;
 
-	float3 edgeOffset = 0.000001;	// Offset from chunk edge to begin coloring
+	float3 edgeOffset = 0.001;	// Offset from chunk edge to begin coloring
 	float3 edgeWidth = 0.03;		// Offset from chunk edge to smoothstep to off
 	float3 edgeRed = float3(.6, 0, 0);
 	// float3 edgeGreen = float3(0, 1, 0);
@@ -344,12 +352,13 @@ void main(in PS_Input PSInput, out PS_Output PSOutput)
 	diffuse.a = 1.0f;
 #endif
 
-#if !defined(BLEND) && !defined(ALPHA_TEST)
-	diffuse.rgb = HighlightSpawnArea(diffuse.rgb, PSInput);
-#endif
 
 #ifdef FOG
 	diffuse.rgb = lerp( diffuse.rgb, PSInput.fogColor.rgb, PSInput.fogColor.a );
+#endif
+
+#if !defined(BLEND) && !defined(ALPHA_TEST)
+	diffuse.rgb = HighlightSpawnArea(diffuse.rgb, PSInput);
 #endif
 
 //
