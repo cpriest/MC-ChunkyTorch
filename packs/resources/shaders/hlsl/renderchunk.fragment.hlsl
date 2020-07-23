@@ -62,6 +62,43 @@ float circle(float2 pos, float radius, float edge) {
 float3 tulm(float3 pos, float4x4 mat) { return mul(float4(pos, 1), mat); }
 float3 mult(float3 pos, float4x4 mat) { return mul(mat, float4(pos, 1)); }
 
+float3 HilightDistancePoints(float3 diffuse, in PS_Input psi) {
+
+	float4 colZero = float4(.5, .5, .5, .5);
+	float4 colFive = float4(.5, 0, 0, .75);
+	float4 colTen = float4(.5, 0, 0, .75);
+
+	float3 chFrac = frac(psi.chunkPosition);
+	// Get our abs() of worldPos integer, adjusted by our fractional chunk position
+	float3 wPosInt = abs(ceil(psi.wPos - (chFrac * sign(psi.chunkPosition))));
+	// Move y down by 2 to adjust for standing height
+	wPosInt.y -= 2;
+
+
+	// Determine if pixels block position is at (0, 0), (5, 5), (0, 10) or (10, 0) from our current position
+	bool distAtZero = chFrac.y == 0 && wPosInt.x == 0 && wPosInt.z == 0;
+	bool distAtFive = chFrac.y == 0 && wPosInt.x == 5 && wPosInt.z == 5;
+	bool distAtTen = chFrac.y == 0 && ( (wPosInt.x == 0 && wPosInt.z == 10) || (wPosInt.x == 10 && wPosInt.z == 0));
+
+	if(distAtZero || distAtFive || distAtTen) {
+
+		// Square at center of block
+		float2 chStep = step(0.40, chFrac.xz) - step(0.60, chFrac.xz);
+		float chHilight = chStep.x * chStep.y;
+
+		if(distAtZero)
+			diffuse = lerp(diffuse, colZero.rgb, chHilight * colZero.a);
+		else if(distAtFive)
+			diffuse = lerp(diffuse, colFive.rgb, chHilight * colFive.a);
+		else if(distAtTen)
+			diffuse = lerp(diffuse, colTen.rgb, chHilight * colTen.a);
+
+	}
+
+	return diffuse;
+}
+
+
 float3 testing(float3 color, in PS_Input psi) {
 
 	return color;
@@ -303,6 +340,7 @@ float3 HighlightChunkBoundary(float3 diffuse, in PS_Input psi) {
 	return diffuse;
 }
 
+
 ROOT_SIGNATURE
 void main(in PS_Input PSInput, out PS_Output PSOutput)
 {
@@ -366,11 +404,13 @@ void main(in PS_Input PSInput, out PS_Output PSOutput)
 //
 	diffuse.rgb = HighlightChunkBoundary(diffuse.rgb, PSInput);
 
+	diffuse.rgb = HilightDistancePoints(diffuse.rgb, PSInput);
+
 	PSOutput.color = diffuse;
 
 #ifdef VR_MODE
 	// On Rift, the transition from 0 brightness to the lowest 8 bit value is abrupt, so clamp to
-	// the lowest 8 bit value.
+	// the lowest 8 bit value
 	PSOutput.color = max(PSOutput.color, 1 / 255.0f);
 #endif
 
