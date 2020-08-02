@@ -1,6 +1,6 @@
 // These [aren't but] should be grouped in a way that they require the least amount of updating (world data in one, model data in another, part of model data in another one, etc)
 
-// This define specifies our uber root signature so that it can be 
+// This define specifies our uber root signature so that it can be
 // included at shader compile time, which speeds up PSO creation time.
 // https://msdn.microsoft.com/en-us/library/windows/desktop/dn913202(v=vs.85).aspx
 #define MinecraftRootSignature "RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | DENY_DOMAIN_SHADER_ROOT_ACCESS | DENY_GEOMETRY_SHADER_ROOT_ACCESS | DENY_HULL_SHADER_ROOT_ACCESS), " \
@@ -52,13 +52,13 @@
 	"CBV(b6, visibility=SHADER_VISIBILITY_VERTEX)"
 
 // HLSL root signatures require SM 5.0 or higher.  We only use SM 5.0
-// or higher when the Feature Level is 11_0 or above.  Specifying a 
+// or higher when the Feature Level is 11_0 or above.  Specifying a
 // root signature when compiling for DX11 silently ignores the root
 // signature.
-#if (VERSION >= 0xb000) 
+#if (VERSION >= 0xb000)
 #define ROOT_SIGNATURE [RootSignature(MinecraftRootSignature)]
 #else
-#define ROOT_SIGNATURE 
+#define ROOT_SIGNATURE
 #endif
 
 #if (defined(USE_STEREO_TEXTURE_ARRAY) || defined(ARRAY_TEXTURE_0)) && (VERSION >= 0xa000)

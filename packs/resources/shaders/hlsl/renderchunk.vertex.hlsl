@@ -26,6 +26,7 @@ struct PS_Input {
 	lpfloat4 color : COLOR;
 	float2 uv0 : TEXCOORD_0;
 	float2 uv1 : TEXCOORD_1;
+	float4 cc  : TEXCOORD_2;
 #endif
 
 #ifdef FOG
@@ -81,6 +82,7 @@ void main(in VS_Input VSInput, out PS_Input PSInput)
 		PSInput.position = mul(PROJ, PSInput.position);
 	#endif
 
+	PSInput.cc = FOG_COLOR;
 #endif
 	PSInput.wPos = worldPos.xyz;
 #ifdef GEOMETRY_INSTANCEDSTEREO
