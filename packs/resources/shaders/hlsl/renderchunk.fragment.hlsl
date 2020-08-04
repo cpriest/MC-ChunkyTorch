@@ -34,6 +34,7 @@ struct float3_grid {
 	float3 _10, _11, _12, _13;
 	float3 _20, _21, _22, _23;
 	float3 _30, _31, _32, _33;
+	float3 _40, _41, _42, _43;
 };
 
 float3 testing_hud(float3 diffuse, in PS_Input psi) {
@@ -44,30 +45,38 @@ float3 testing_hud(float3 diffuse, in PS_Input psi) {
 	// Appears as though uv1.x == light level of pixel being rendered9
 	// Appears as though uv1.y == 0 in nether and 239/255 in overworld (day/night)
 
-	space._00 = FOG_COLOR.rgb;
-	space._01 = sin(psi.wPos * TIME / 10);
-	space._10 = TEXTURE_1.Sample(TextureSampler1, float2(0,1));
-	space._11 = TEXTURE_1.Sample(TextureSampler1, psi.uv1);
-	space._20 = f3(psi.uv1.x, psi.uv1.x, psi.uv1.x);
-	space._21 = f3(psi.uv1.y, psi.uv1.y, psi.uv1.y);
+	// space._00 = FOG_COLOR.rgb;
+	// space._01 = sin(psi.wPos * TIME / 10);
+	// space._10 = TEXTURE_1.Sample(TextureSampler1, float2(0,1));
+	// space._11 = TEXTURE_1.Sample(TextureSampler1, psi.uv1);
+#ifdef FOG
+	// space._30 = psi.fogColor.a;
+	// space._31 = psi.fogColor.a * .85;
+#endif
+	space._40 = TEXTURE_1.Sample(TextureSampler1, psi.uv1);
+	// space._41 = psi.fogColor.a;
 
- 	diffuse = hud_indicator(diffuse, pos, f2(-1,-1), rd3 * (space._01 == space._11));
-	diffuse = hud_indicator(diffuse, pos, f2( 0,-1), gr3 * (float)(psi.cc == FOG_COLOR));
-	diffuse = hud_indicator(diffuse, pos, f2( 1,-1), bu3 * (space._20 == space._01));
-	diffuse = hud_indicator(diffuse, pos, f2(-1, 0), cy3 * 0);
-	diffuse = hud_indicator(diffuse, pos, f2( 0, 0), ma3 * 0);
-	diffuse = hud_indicator(diffuse, pos, f2(-1, 0), yl3 * 0);
+ 	// diffuse = hud_indicator(diffuse, pos, f2(-1,-1), rd3 * (space._01 == space._11));
+	// diffuse = hud_indicator(diffuse, pos, f2( 0,-1), gr3 * (float)(psi.cc == FOG_COLOR));
+	// diffuse = hud_indicator(diffuse, pos, f2( 1,-1), bu3 * (space._20 == space._01));
+	// diffuse = hud_indicator(diffuse, pos, f2(-1, 0), cy3 * 0);
+	// diffuse = hud_indicator(diffuse, pos, f2( 0, 0), ma3 * 0);
+	// diffuse = hud_indicator(diffuse, pos, f2(-1, 0), yl3 * 0);
 	diffuse = hud_indicator(diffuse, pos, f2( 3, 0), yl3 * (psi.uv1.y > .5));
 
-	diffuse = hud_space(diffuse, pos, f2(-2,  0), space._00);
-	diffuse = hud_space(diffuse, pos, f2(-2,  1), space._01);
-	diffuse = hud_space(diffuse, pos, f2(-1,  0), space._10);
-	diffuse = hud_space(diffuse, pos, f2(-1,  1), space._11);
-	diffuse = hud_space(diffuse, pos, f2( 1,  0), space._20);
-	diffuse = hud_space(diffuse, pos, f2( 1,  1), space._21);
+	// diffuse = hud_space(diffuse, pos, f2(-2,  0), space._00);
+	// diffuse = hud_space(diffuse, pos, f2(-2,  1), space._01);
+	// diffuse = hud_space(diffuse, pos, f2(-1,  0), space._10);
+	// diffuse = hud_space(diffuse, pos, f2(-1,  1), space._11);
+	// diffuse = hud_space(diffuse, pos, f2( 1,  0), space._30);
+	// diffuse = hud_space(diffuse, pos, f2( 1,  1), space._31);
+	diffuse = hud_space(diffuse, pos, f2( 2,  0), space._40);
+	// diffuse = hud_space(diffuse, pos, f2( 2,  1), space._41);
 
-	diffuse = hud_space_huge(diffuse, pos, f2(-1,-1), f3(frac(psi.chunkPosition).x, 0, frac(psi.chunkPosition).z));
-	diffuse = hud_space_huge(diffuse, pos, f2( 0, 0), f3(frac(psi.chunkPosition).x, 0, frac(psi.chunkPosition).z));
+	// diffuse = hud_space_huge(diffuse, pos, f2(-1, 0), f3(frac(psi.chunkPosition).x, 0, frac(psi.chunkPosition).z));
+	// diffuse = hud_space_huge(diffuse, pos, f2( 0, 0), f3(frac(psi.chunkPosition).x, 0, frac(psi.chunkPosition).z));
+	// diffuse = hud_space_huge(diffuse, pos, f2(-1,-1), f3(frac(psi.chunkPosition).x, 0, frac(psi.chunkPosition).z));
+	// diffuse = hud_space_huge(diffuse, pos, f2( 0,-1), f3(frac(psi.chunkPosition).x, 0, frac(psi.chunkPosition).z));
 
 	// diffuse = hud_grid(diffuse, pos, f2(0,0), f3(diffuse.r, 0, 0), 1, f2(530, 300), 200, 30);
 	// diffuse = hud_grid(diffuse, pos, f2(1,0), f3(0, diffuse.g, 0), 1, f2(530, 300), 200, 30);
@@ -296,12 +305,12 @@ void main(in PS_Input PSInput, out PS_Output PSOutput) {
 #endif
 
 #if !defined(ALWAYS_LIT)
-	diffuse = diffuse * TEXTURE_1.Sample(TextureSampler1, PSInput.uv1);
+	diffuse = diffuse * clamp(TEXTURE_1.Sample(TextureSampler1, PSInput.uv1) * 1.2, 0, 1);
 #endif
 
 #ifndef SEASONS
 	#if !USE_ALPHA_TEST && !defined(BLEND)
-		diffuse.a = PSInput.color.a;
+		diffuse.a = clamp(PSInput.color.a * 1.2, 0, 1);
 	#endif
 
 	diffuse.rgb *= PSInput.color.rgb;
@@ -314,7 +323,7 @@ void main(in PS_Input PSInput, out PS_Output PSOutput) {
 
 
 #ifdef FOG
-	diffuse.rgb = lerp( diffuse.rgb, PSInput.fogColor.rgb, PSInput.fogColor.a );
+	diffuse.rgb = lerp( diffuse.rgb, PSInput.fogColor.rgb, PSInput.fogColor.a * .60 );
 #endif
 
 #if !defined(BLEND) && !defined(ALPHA_TEST)

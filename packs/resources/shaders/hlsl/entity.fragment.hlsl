@@ -165,7 +165,7 @@ void main(in PS_Input PSInput, out PS_Output PSOutput)
 #endif
 
 	//apply fog
-	color.rgb = lerp( color.rgb, PSInput.fogColor.rgb, PSInput.fogColor.a );
+	color.rgb = lerp( color.rgb, PSInput.fogColor.rgb, PSInput.fogColor.a * .6);
 
 #ifdef GLINT
 	// Applies color mask to glint texture instead and blends with original color
