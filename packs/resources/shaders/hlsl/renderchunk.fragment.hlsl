@@ -6,6 +6,21 @@
 #include "funcs/util.hlsl"
 #include "funcs/hud.hlsl"
 
+/***
+
+	TODO/IDEAS:
+		☐ xyz reticule
+		  - Learn about vector angles / angle math
+		☐ Adjust for camera position when showing 5x5 diagonals / 10x10 + marks
+
+	RESEARCH
+		☐ Pass game data to shader
+			? Item in hand
+			? Options in menu
+		☐ Additional key bindings?
+		☐ Some way to pass data on to future frames?  Like ghost trails... (cool)
+
+*/
 struct PS_Input
 {
 	float3 chunkPosition : CHUNK_POS;		// Relative world coordinates?
@@ -15,7 +30,7 @@ struct PS_Input
 #ifndef BYPASS_PIXEL_SHADER
 	lpfloat4 color : COLOR;
 	float2 uv0 : TEXCOORD_0;
-	float2 uv1 : TEXCOORD_1;
+	float2 uv1 : TEXCOORD_1;				// x = blockLight, y = skyLight
 	float4 cc : TEXCOORD_2;
 #endif
 
@@ -45,16 +60,28 @@ float3 testing_hud(float3 diffuse, in PS_Input psi) {
 	// Appears as though uv1.x == light level of pixel being rendered9
 	// Appears as though uv1.y == 0 in nether and 239/255 in overworld (day/night)
 
+	space._00 = space._01 = space._02 = space._03 =
+	space._10 = space._11 = space._12 = space._13 =
+	space._20 = space._21 = space._22 = space._23 =
+	space._30 = space._31 = space._32 = space._33 =
+	space._40 = space._41 = space._42 = space._43 = 0;
+
 	// space._00 = FOG_COLOR.rgb;
 	// space._01 = sin(psi.wPos * TIME / 10);
-	// space._10 = TEXTURE_1.Sample(TextureSampler1, float2(0,1));
-	// space._11 = TEXTURE_1.Sample(TextureSampler1, psi.uv1);
-#ifdef FOG
-	// space._30 = psi.fogColor.a;
-	// space._31 = psi.fogColor.a * .85;
+	// space._10 = luma601(diffuse);
+	// space._11 = luma709(diffuse);
+	// if(space._10.r < .3) {
+	// 	#if !defined(ALWAYS_LIT)
+#if USE_TEXEL_AA
+			space._30 = texture2D_AA(TEXTURE_0, TextureSampler0, psi.uv0 );
 #endif
-	space._40 = TEXTURE_1.Sample(TextureSampler1, psi.uv1);
-	// space._41 = psi.fogColor.a;
+	// 		space._31 = diffuse * TEXTURE_1.Sample(TextureSampler1, psi.uv1).rgb;
+	// 	#endif
+		// space._30 = AdjustLumosity(diffuse, .3);
+		// space._31 = AdjustLumosity(diffuse, .5);
+	// }
+	// space._40 = psi.wPos;
+	// space._41 = psi.chunkPosition;
 
  	// diffuse = hud_indicator(diffuse, pos, f2(-1,-1), rd3 * (space._01 == space._11));
 	// diffuse = hud_indicator(diffuse, pos, f2( 0,-1), gr3 * (float)(psi.cc == FOG_COLOR));
@@ -70,7 +97,7 @@ float3 testing_hud(float3 diffuse, in PS_Input psi) {
 	// diffuse = hud_space(diffuse, pos, f2(-1,  1), space._11);
 	// diffuse = hud_space(diffuse, pos, f2( 1,  0), space._30);
 	// diffuse = hud_space(diffuse, pos, f2( 1,  1), space._31);
-	diffuse = hud_space(diffuse, pos, f2( 2,  0), space._40);
+	// diffuse = hud_space(diffuse, pos, f2( 2,  0), space._40);
 	// diffuse = hud_space(diffuse, pos, f2( 2,  1), space._41);
 
 	// diffuse = hud_space_huge(diffuse, pos, f2(-1, 0), f3(frac(psi.chunkPosition).x, 0, frac(psi.chunkPosition).z));
@@ -305,12 +332,19 @@ void main(in PS_Input PSInput, out PS_Output PSOutput) {
 #endif
 
 #if !defined(ALWAYS_LIT)
-	diffuse = diffuse * clamp(TEXTURE_1.Sample(TextureSampler1, PSInput.uv1) * 1.2, 0, 1);
+	float	nearPct = easeOutCubic(smoothstep(0, 6, length(PSInput.wPos)));
+	float3 darkenBy = TEXTURE_1.Sample(TextureSampler1, PSInput.uv1).rgb * 1.2;
+
+	// Reduce light reduction nearby the player
+	diffuse.rgb *= lerp(max(darkenBy, .8), darkenBy, nearPct);
+
+	// Add Torch light color nearby
+	diffuse.rgb += f3(.1, .05, 0) * (1-nearPct);
 #endif
 
 #ifndef SEASONS
 	#if !USE_ALPHA_TEST && !defined(BLEND)
-		diffuse.a = clamp(PSInput.color.a * 1.2, 0, 1);
+		diffuse.a = PSInput.color.a;
 	#endif
 
 	diffuse.rgb *= PSInput.color.rgb;
